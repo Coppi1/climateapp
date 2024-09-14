@@ -1,5 +1,8 @@
+import { registerRootComponent } from "expo";
 import { useForm } from "react-hook-form";
 import LoginPage from "../LoginScreen/LoginScreen";
+
+registerRootComponent(HomeScreen);
 
 export default function HomeScreen() {
   const {

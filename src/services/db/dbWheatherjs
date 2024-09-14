@@ -1,0 +1,35 @@
+const express = require("express");
+const mysql = require("mysql");
+const bodyParser = require("body-parser");
+const app = express();
+const Database = require("./Database");
+const db = new Database();
+
+app.use(bodyParser.json());
+
+db.connect();
+
+app.post("/save-weather", (req, res) => {
+  const { temperature, humidity, weather, aqi, forecast } = req.body;
+
+  const query = `
+    INSERT INTO weather (temperature, humidity, weather, aqi, forecast)
+    VALUES (?, ?, ?, ?, ?)
+  `;
+
+  db.query(
+    query,
+    [temperature, humidity, weather, aqi, JSON.stringify(forecast)],
+    (err, result) => {
+      if (err) {
+        console.error(err);
+        return res.status(500).send("Error saving data");
+      }
+      res.status(200).send("Data saved successfully");
+    }
+  );
+});
+
+app.listen(3000, () => {
+  console.log("Server running on port 3000");
+});
