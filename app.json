@@ -1,6 +1,7 @@
 {
   "expo": {
     "name": "climateapp",
+    "displayName": "climateapp",
     "slug": "climateapp",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -22,6 +23,15 @@
     },
     "web": {
       "favicon": "./assets/favicon.png"
-    }
+    },
+    "plugins": [
+      [
+        "expo-location",
+        {
+          "activityType": "other",
+          "accuracy": "high"
+        }
+      ]
+    ]
   }
 }
