@@ -1,3 +1,4 @@
+// models/Clima.js
 import { DataTypes } from "sequelize";
 import { sequelize } from "../utils/mysqlConection.js";
 
@@ -26,7 +27,7 @@ const Clima = sequelize.define(
       allowNull: false,
     },
     aqi: {
-      type: DataTypes.DECIMAL,
+      type: DataTypes.STRING,
       allowNull: false,
     },
     velocidadeVento: {
