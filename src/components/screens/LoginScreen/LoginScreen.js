@@ -1,165 +1,133 @@
 import axios from "axios";
-import { useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   ActivityIndicator,
   Button,
-  Modal,
   StyleSheet,
   Text,
   TextInput,
   View,
 } from "react-native";
+import WeatherBackground from "../HomeScreen/Background/WheatherBackground";
 
-export default function LoginScreen() {
-  const [location, setLocation] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [weatherData, setWeatherData] = useState([]);
-  const [showLoginModal, setShowLoginModal] = useState(false);
+const weatherBackgrounds = {
+  Clear: require("./assets/clear.png"),
+  Clouds: require("./assets/cloudy.png"),
+  Rain: require("./assets/rain.png"),
+  Thunderstorm: require("./assets/thunderstorm.png"),
+  Snow: require("./assets/snow.png"),
+  Drizzle: require("./assets/drizzle.png"),
+  Mist: require("./assets/mist.png"),
+  Default: require("./assets/default.png"),
+};
+
+export default function LoginScreen({ navigation }) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-
-  const apiKey = "6eb16bb9d145066ea79ce5157c4a38e9";
-  const baseUrl = "https://api.openweathermap.org/data/2.5/forecast/daily";
+  const [weatherData, setWeatherData] = useState(null);
+  const [airQuality, setAirQuality] = useState(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const fetchLocation = () => {
-      if (navigator.geolocation) {
-        navigator.geolocation.getCurrentPosition(
-          async (position) => {
-            const { latitude, longitude } = position.coords;
-            setLocation({ latitude, longitude });
-            setLoading(false);
+    const fetchWeatherAndAirQuality = async () => {
+      try {
+        const apiKey = "6eb16bb9d145066ea79ce5157c4a38e9";
+        const city = "Shenzhen";
 
-            try {
-              const url = `${baseUrl}?lat=${latitude}&lon=${longitude}&cnt=7&appid=${apiKey}&units=metric`;
-              const weatherResponse = await axios.get(url);
-
-              if (
-                weatherResponse.data &&
-                Array.isArray(weatherResponse.data.list)
-              ) {
-                setWeatherData(weatherResponse.data.list);
-              } else {
-                console.error(
-                  "Formato de dados inesperado:",
-                  weatherResponse.data
-                );
-              }
-            } catch (error) {
-              console.error("Erro ao buscar clima:", error);
-            }
-          },
-          (error) => {
-            console.error("Erro ao obter a localização:", error);
-            setLoading(false);
-          }
+        const weatherResponse = await axios.get(
+          `https://api.openweathermap.org/data/2.5/weather?q=${city}&appid=${apiKey}&units=metric`
         );
-      } else {
-        console.error("Geolocalização não suportada pelo navegador");
-        setLoading(false);
+        const weatherCondition = weatherResponse.data.weather[0].main;
+        setWeatherData(weatherResponse.data);
+
+        if (weatherBackgrounds[weatherCondition]) {
+          setBackgroundImage(weatherBackgrounds[weatherCondition]);
+        } else {
+          setBackgroundImage(weatherBackgrounds.Default);
+        }
+
+        const { coord } = weatherResponse.data;
+        const airQualityResponse = await axios.get(
+          `http://api.openweathermap.org/data/2.5/air_pollution?lat=${coord.lat}&lon=${coord.lon}&appid=${apiKey}`
+        );
+        setAirQuality(airQualityResponse.data.list[0]);
+      } catch (error) {
+        console.error("Error fetching data:", error);
       }
+      setLoading(false);
     };
 
-    fetchLocation();
+    fetchWeatherAndAirQuality();
   }, []);
 
   const handleLogin = () => {
-    console.log(`Email: ${email}, Senha: ${password}`);
-    setShowLoginModal(false);
+    navigation.navigate("WeatherScreen", { weatherData, airQuality });
+  };
+
+  const getAQIQuality = (aqi) => {
+    if (aqi === 1) return "Good";
+    if (aqi === 2) return "Fair";
+    if (aqi === 3) return "Moderate";
+    if (aqi === 4) return "Poor";
+    if (aqi === 5) return "Very Poor";
   };
 
   if (loading) {
-    return <ActivityIndicator />;
+    return <ActivityIndicator size="large" color="#0000ff" />;
   }
 
   return (
-    <View style={styles.container}>
-      {weatherData.length > 0 ? (
-        weatherData.map((data, index) => (
-          <View key={index} style={styles.weatherContainer}>
-            <Text>Data: {new Date(data.dt * 1000).toLocaleDateString()}</Text>
-            <Text>Temperatura: {data.temp.day} °C</Text>
-            <Text>Clima: {data.weather[0].description}</Text>
-            <Text>Umidade: {data.humidity} %</Text>
-            <Text>Velocidade do Vento: {data.speed} km/h</Text>
-          </View>
-        ))
-      ) : (
-        <Text>Carregando dados de clima...</Text>
-      )}
+    <WeatherBackground weatherCondition={weatherData.weather[0].main}>
+      <View style={styles.container}>
+        <Text style={styles.weatherText}>
+          Current Temperature: {Math.round(weatherData.main.temp)}°C
+        </Text>
+        <Text style={styles.weatherText}>
+          Weather: {weatherData.weather[0].description}
+        </Text>
+        <Text style={styles.weatherText}>
+          AQI: {airQuality.main.aqi} - {getAQIQuality(airQuality.main.aqi)}
+        </Text>
 
-      <Button title="Efetuar Login" onPress={() => setShowLoginModal(true)} />
-
-      <Modal
-        visible={showLoginModal}
-        transparent={true}
-        animationType="slide"
-        onRequestClose={() => setShowLoginModal(false)}
-      >
-        <View style={styles.modalBackground}>
-          <View style={styles.modalContainer}>
-            <Text style={styles.modalTitle}>Login</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="Email"
-              value={email}
-              onChangeText={(text) => setEmail(text)}
-            />
-            <TextInput
-              style={styles.input}
-              placeholder="Senha"
-              secureTextEntry={true}
-              value={password}
-              onChangeText={(text) => setPassword(text)}
-            />
-            <Button title="Login" onPress={handleLogin} />
-            <Button
-              title="Cancelar"
-              onPress={() => setShowLoginModal(false)}
-              color="red"
-            />
-          </View>
-        </View>
-      </Modal>
-    </View>
+        <TextInput
+          style={styles.input}
+          placeholder="Accounts"
+          value={email}
+          onChangeText={setEmail}
+        />
+        <TextInput
+          style={styles.input}
+          placeholder="Password"
+          secureTextEntry={true}
+          value={password}
+          onChangeText={setPassword}
+        />
+        <Button title="Log In" onPress={handleLogin} color="#4A90E2" />
+      </View>
+    </WeatherBackground>
   );
 }
 
 const styles = StyleSheet.create({
+  background: {
+    flex: 1,
+    resizeMode: "cover",
+    justifyContent: "center",
+  },
   container: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
     padding: 20,
-  },
-  weatherContainer: {
-    marginBottom: 20,
-  },
-  modalBackground: {
-    flex: 1,
-    justifyContent: "center",
     alignItems: "center",
-    backgroundColor: "rgba(0, 0, 0, 0.5)",
-  },
-  modalContainer: {
-    width: 300,
-    padding: 20,
-    backgroundColor: "white",
-    borderRadius: 10,
-    elevation: 5,
-  },
-  modalTitle: {
-    fontSize: 20,
-    fontWeight: "bold",
-    marginBottom: 20,
-    textAlign: "center",
   },
   input: {
-    width: "100%",
+    backgroundColor: "#FFF",
     padding: 10,
-    borderWidth: 1,
-    borderColor: "#ccc",
+    marginBottom: 15,
     borderRadius: 5,
-    marginBottom: 10,
+    width: "80%",
+  },
+  weatherText: {
+    color: "white",
+    fontSize: 16,
+    marginBottom: 5,
   },
 });
